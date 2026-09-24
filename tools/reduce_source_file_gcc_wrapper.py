@@ -9,31 +9,34 @@ from tools.implementations.runners.averaging_runner import AveragingRunner
 from tools.services.gcc_wrapper_support import WrapperConfigGenerator, WrapperEnhancedBuilder
 from tools.services.reduce_flags import Reduce
 
-argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
-argparser.add_argument('--source-file-path', help='Path to the source file', required=True)
-argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
-argparser.add_argument('--gcc-wrapper-bin', help='Path to the gcc wrapper bin directory', required=True)
-argparser.add_argument('--optimization-config', help='Path to the optimization entries file', required=True)
-argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
-argparser.add_argument('--flag-set', choices=WrapperConfigGenerator.FLAG_SET_CHOICES,
-                       default='reduced', help='Flag set used by the input configuration')
-argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
-argparser.add_argument('--cmd-args', help='Arguments passed to binary', type=str, default="")
-argparser.add_argument('--stdin-file-path', help='Path to the stdin file', type=str, default='')
-argparser.add_argument('--ranked-flags-csv', help='Path to ranked flags CSV for priority-aware grouping', default=None)
-argparser.add_argument('--runner-cores', help='cores to set to taskset during runner run', type=str, default='')
-argparser.add_argument('--entry-index', help='Configuration entry to reduce', type=int, default=0)
-argparser.add_argument('--initial-group-size', help='Initial number of flags tested as a group',
-                       type=int, default=50)
-argparser.add_argument('--impact-threshold', help='Maximum allowed runtime degradation, in percent',
-                       type=float, default=0.1)
-argparser.add_argument('--min-flags-to-keep', help='Minimum non-level flags to retain',
-                       type=int, default=0)
-argparser.add_argument('--retries', help='Build/run attempts per configuration', type=int, default=1)
+
+def create_argparser():
+    argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
+    argparser.add_argument('--source-file-path', help='Path to the source file', required=True)
+    argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
+    argparser.add_argument('--gcc-wrapper-bin', help='Path to the gcc wrapper bin directory', required=True)
+    argparser.add_argument('--optimization-config', help='Path to the optimization entries file', required=True)
+    argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
+    argparser.add_argument('--flag-set', choices=WrapperConfigGenerator.FLAG_SET_CHOICES,
+                           default='reduced', help='Flag set used by the input configuration')
+    argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
+    argparser.add_argument('--cmd-args', help='Arguments passed to binary', type=str, default="")
+    argparser.add_argument('--stdin-file-path', help='Path to the stdin file', type=str, default='')
+    argparser.add_argument('--ranked-flags-csv', help='Path to ranked flags CSV for priority-aware grouping', default=None)
+    argparser.add_argument('--runner-cores', help='cores to set to taskset during runner run', type=str, default='')
+    argparser.add_argument('--entry-index', help='Configuration entry to reduce', type=int, default=0)
+    argparser.add_argument('--initial-group-size', help='Initial number of flags tested as a group',
+                           type=int, default=50)
+    argparser.add_argument('--impact-threshold', help='Maximum allowed runtime degradation, in percent',
+                           type=float, default=0.1)
+    argparser.add_argument('--min-flags-to-keep', help='Minimum non-level flags to retain',
+                           type=int, default=0)
+    argparser.add_argument('--retries', help='Build/run attempts per configuration', type=int, default=1)
+    return argparser
 
 
 def main():
-    args = argparser.parse_args()
+    args = create_argparser().parse_args()
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
     wrapper_name = 'gcc' if os.path.splitext(args.source_file_path)[1].lower() == '.c' else 'g++'

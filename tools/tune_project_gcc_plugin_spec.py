@@ -7,22 +7,25 @@ from tools.implementations.runners.spec_runner import SPECRunner
 from tools.services.iterative_tuner import iterative_tune
 from tools.services.gcc_plugin_support import PluginConfigGenerator, PluginEnhancedBuilder
 
-argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
-argparser.add_argument('--spec-root', help='Path to the spec root directory', required=True)
-argparser.add_argument('--spec-benchmark', help='Name of the spec benchmark', required=True)
-argparser.add_argument('--spec-config', help='Path to the spec config file', required=True)
-argparser.add_argument('--spec-threads-count', help='Number of threads for the spec run', type=int, default=1)
-argparser.add_argument('--spec-iterations-count', help='Number of iterations for the spec run', type=int, default=1)
-argparser.add_argument('--spec-size', help='Size of the spec run', choices=['test', 'train', 'refspeed'], default='test')
-argparser.add_argument('--spec-core-count', help='Number of cores for the spec build', type=int, default=1)
-argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
-argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
-argparser.add_argument('--optimization-entries', help='Path to the optimization entries file', required=True)
-argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
-argparser.add_argument('--flag-set', choices=PluginConfigGenerator.FLAG_SET_CHOICES,
-                       default='reduced', help='GCC optimization flag set to tune')
-argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
-argparser.add_argument("--runner-cores", help="cores to set to taskset during runner run", type=str, default='')
+
+def create_argparser():
+    argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
+    argparser.add_argument('--spec-root', help='Path to the spec root directory', required=True)
+    argparser.add_argument('--spec-benchmark', help='Name of the spec benchmark', required=True)
+    argparser.add_argument('--spec-config', help='Path to the spec config file', required=True)
+    argparser.add_argument('--spec-threads-count', help='Number of threads for the spec run', type=int, default=1)
+    argparser.add_argument('--spec-iterations-count', help='Number of iterations for the spec run', type=int, default=1)
+    argparser.add_argument('--spec-size', help='Size of the spec run', choices=['test', 'train', 'refspeed'], default='test')
+    argparser.add_argument('--spec-core-count', help='Number of cores for the spec build', type=int, default=1)
+    argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
+    argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
+    argparser.add_argument('--optimization-entries', help='Path to the optimization entries file', required=True)
+    argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
+    argparser.add_argument('--flag-set', choices=PluginConfigGenerator.FLAG_SET_CHOICES,
+                           default='reduced', help='GCC optimization flag set to tune')
+    argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
+    argparser.add_argument("--runner-cores", help="cores to set to taskset during runner run", type=str, default='')
+    return argparser
 
 
 def load_json(json_path):
@@ -32,7 +35,7 @@ def load_json(json_path):
 
 
 def main():
-    args = argparser.parse_args()
+    args = create_argparser().parse_args()
 
     # Can be replaced with any Builder or Runner
     base_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.compiler_bin)

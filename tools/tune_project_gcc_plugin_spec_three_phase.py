@@ -10,29 +10,32 @@ from tools.services.gcc_wrapper_support import WrapperEnhancedBuilder
 from tools.services.combined_builder import CombinedEnhancedBuilder, CombinedConfigGenerator
 from tools.services.simple_tuner import SimpleEnhancedBuilder
 
-argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
-argparser.add_argument('--spec-root', help='Path to the spec root directory', required=True)
-argparser.add_argument('--spec-benchmark', help='Name of the spec benchmark', required=True)
-argparser.add_argument('--spec-config', help='Path to the spec config file', required=True)
-argparser.add_argument('--spec-threads-count', help='Number of threads for the spec run', type=int, default=1)
-argparser.add_argument('--spec-iterations-count', help='Number of iterations for the spec run', type=int, default=1)
-argparser.add_argument('--spec-size', help='Size of the spec run', choices=['test', 'train', 'refspeed'], default='test')
-argparser.add_argument('--spec-core-count', help='Number of cores for the spec build', type=int, default=1)
-argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
-argparser.add_argument('--gcc-wrapper-bin', help='Path to the gcc wrapper bin directory', required=True)
-argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
-argparser.add_argument('--file-entries', help='Path to the file-level optimization entries JSON', required=True)
-argparser.add_argument('--function-entries', help='Path to the function-level optimization entries JSON', required=True)
-argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
-argparser.add_argument('--flag-set', choices=CombinedConfigGenerator.FLAG_SET_CHOICES,
-                       default='reduced',
-                       help='GCC optimization flag set used by all three phases')
-argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
-argparser.add_argument('--runner-cores', help='Cores to set to taskset during runner run', type=str, default='')
-argparser.add_argument('--phase3-only', '--phase2-only', dest='phase3_only', action='store_true',
-                       help='Skip global and file-level tuning and run only function-level tuning, '
-                            'loading fixed global flags from <output-dir>/global_base_flags.json and '
-                            'fixed file config from <output-dir>/optimization_config.json')
+
+def create_argparser():
+    argparser = argparse.ArgumentParser(parents=opentuner.argparsers())
+    argparser.add_argument('--spec-root', help='Path to the spec root directory', required=True)
+    argparser.add_argument('--spec-benchmark', help='Name of the spec benchmark', required=True)
+    argparser.add_argument('--spec-config', help='Path to the spec config file', required=True)
+    argparser.add_argument('--spec-threads-count', help='Number of threads for the spec run', type=int, default=1)
+    argparser.add_argument('--spec-iterations-count', help='Number of iterations for the spec run', type=int, default=1)
+    argparser.add_argument('--spec-size', help='Size of the spec run', choices=['test', 'train', 'refspeed'], default='test')
+    argparser.add_argument('--spec-core-count', help='Number of cores for the spec build', type=int, default=1)
+    argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
+    argparser.add_argument('--gcc-wrapper-bin', help='Path to the gcc wrapper bin directory', required=True)
+    argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
+    argparser.add_argument('--file-entries', help='Path to the file-level optimization entries JSON', required=True)
+    argparser.add_argument('--function-entries', help='Path to the function-level optimization entries JSON', required=True)
+    argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
+    argparser.add_argument('--flag-set', choices=CombinedConfigGenerator.FLAG_SET_CHOICES,
+                           default='reduced',
+                           help='GCC optimization flag set used by all three phases')
+    argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
+    argparser.add_argument('--runner-cores', help='Cores to set to taskset during runner run', type=str, default='')
+    argparser.add_argument('--phase3-only', '--phase2-only', dest='phase3_only', action='store_true',
+                           help='Skip global and file-level tuning and run only function-level tuning, '
+                                'loading fixed global flags from <output-dir>/global_base_flags.json and '
+                                'fixed file config from <output-dir>/optimization_config.json')
+    return argparser
 
 
 def load_json(json_path):
@@ -41,7 +44,7 @@ def load_json(json_path):
 
 
 def main():
-    args = argparser.parse_args()
+    args = create_argparser().parse_args()
 
     combined_base_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.gcc_wrapper_bin)
     combined_builder = CombinedEnhancedBuilder(

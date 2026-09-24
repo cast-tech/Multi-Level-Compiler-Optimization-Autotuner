@@ -1,10 +1,10 @@
 # Multi-Level Compiler Optimization Autotuner
 
 This project profiles C/C++ programs and uses OpenTuner to search GCC optimization
-settings at global, source-file, or function scope. Function settings are applied by
+settings at global, module, or function scope. Function settings are applied by
 a GCC plugin; file settings are applied by compiler wrapper scripts.
 
-The tools support ordinary CMake projects and SPEC CPU2017 benchmarks. They can:
+The tools support CMake projects and SPEC CPU2017 benchmarks. They can:
 
 - discover hot functions and source files with `perf`;
 - tune functions with the GCC plugin or files with the GCC wrappers;

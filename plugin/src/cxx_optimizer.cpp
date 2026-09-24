@@ -78,7 +78,7 @@ static void handle_optimize_attribute(tree node, const std::string &attribute) {
     cl_optimization_restore(&global_options, &global_options_set, &cur_opts);
 }
 
-static void append_to_attribute_stream(std::ostringstream &oss, unsigned int opt_set, const std::string &opt_name) {
+static void append_to_attribute_stream(std::ostringstream &oss, short opt_set, const std::string &opt_name) {
     if (opt_set != OPTIMIZATION_SET_DEFAULT) {
         oss << "," << (opt_set == OPTIMIZATION_SET_ON ? "-f" : "-fno-") << opt_name;
     }

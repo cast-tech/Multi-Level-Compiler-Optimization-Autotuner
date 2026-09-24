@@ -8,22 +8,25 @@ from tools.implementations.runners.binary_file_runner import BinaryFileRunner
 from tools.services.optimal_optimization_entries import create_optimal_optimization_entries
 from tools.services.gcc_plugin_support import PluginEnhancedBuilder
 
-argparser = argparse.ArgumentParser()
-argparser.add_argument('--project-dir', help='Path to the project directory', required=True)
-argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
-argparser.add_argument('--project-binary', help='Name of the project binary', required=True)
-argparser.add_argument('--cmd-args', help='Arguments passed to binary', type=str, default="")
-argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
-argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
-argparser.add_argument('--build-cores', help='Number of parallel CMake build jobs', type=int, default=1)
-argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
-argparser.add_argument('--perf', help='Path to perf', type=str, default='perf')
-argparser.add_argument('--frequency', help='Frequency of sampling', type=int, default=1000)
-argparser.add_argument('--entries-limit', help='Max number of optimization entries allowed', type=int, default=10)
+
+def create_argparser():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--project-dir', help='Path to the project directory', required=True)
+    argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
+    argparser.add_argument('--project-binary', help='Name of the project binary', required=True)
+    argparser.add_argument('--cmd-args', help='Arguments passed to binary', type=str, default="")
+    argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
+    argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
+    argparser.add_argument('--build-cores', help='Number of parallel CMake build jobs', type=int, default=1)
+    argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
+    argparser.add_argument('--perf', help='Path to perf', type=str, default='perf')
+    argparser.add_argument('--frequency', help='Frequency of sampling', type=int, default=1000)
+    argparser.add_argument('--entries-limit', help='Max number of optimization entries allowed', type=int, default=10)
+    return argparser
 
 
 def main():
-    args = argparser.parse_args()
+    args = create_argparser().parse_args()
 
     # Can be replaced with any Builder, Runner or Profiler
     builder = CMakeProjectBuilder(args.compiler_bin, args.project_dir, args.output_dir,

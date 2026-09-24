@@ -11,7 +11,7 @@ static void trim(std::string& s) {
     s.erase(s.find_last_not_of(" \t\r\n") + 1);
 }
 
-static unsigned int parse_bool(const std::string& value) {
+static short parse_bool(const std::string& value) {
     std::string lower = value;
     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
     if (lower == "true" || lower == "1") {
