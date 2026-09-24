@@ -5,7 +5,7 @@ import os
 
 from tools.implementations.builders.spec_builder import SPECBuilder
 from tools.implementations.runners.spec_runner import SPECRunner
-from tools.services.iterative_tuner import iterative_tune, three_phase_iterative_tune
+from tools.services.iterative_tuner import run_phase_3, three_phase_iterative_tune
 from tools.services.gcc_wrapper_support import WrapperEnhancedBuilder
 from tools.services.combined_builder import CombinedEnhancedBuilder, CombinedConfigGenerator
 from tools.services.simple_tuner import SimpleEnhancedBuilder
@@ -60,16 +60,8 @@ def main():
         global_flags_path = os.path.join(args.output_dir, "global_base_flags.json")
         fixed_file_config = load_json(final_config_path)
         base_flags = load_json(global_flags_path) if os.path.isfile(global_flags_path) else ["-O3"]
-        print("=== Phase 3 only: Function-level tuning (combined wrapper + plugin, global + file fixed) ===")
-        best_function_configs = iterative_tune(
-            args, combined_runner, combined_builder, function_entries, args.output_dir,
-            initial_config=fixed_file_config, tuner_name_prefix="phase3_", base_flags=base_flags,
-            db_dir=os.path.join(args.output_dir, "opentuner.db", "phase3_function")
-        )
-        final_config = fixed_file_config + best_function_configs
-        with open(final_config_path, "w") as f:
-            json.dump(final_config, f, indent=2)
-        print(f"\nFinal combined config written to {final_config_path}")
+        run_phase_3(args, combined_runner, combined_builder, function_entries,
+                    args.output_dir, base_flags, fixed_file_config, phase3_only=True)
     else:
         global_base_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.compiler_bin)
         # Tune the same flag set the later (wrapper/plugin) stages use.

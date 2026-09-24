@@ -125,47 +125,61 @@ def global_tune(args, runner, builder, output_dir, base_flags=None, tuner_name="
     return get_best_optimization_config(tuner_name, output_dir)
 
 
-def three_phase_iterative_tune(args, global_runner, file_runner, combined_runner,
-                               global_builder, file_builder, combined_builder,
-                               file_entries, function_entries, output_dir):
-    """3-stage tuning: (1) global whole-project flags, (2) file-level entries on
-    top of the global flags, (3) function-level entries on top of global + file.
-
-    Writes:
-      <output_dir>/global_base_flags.json  - the tuned whole-build flag list
-      <output_dir>/optimization_config.json - [file entries..., function entries...]
-    Replay both together, e.g. run_spec_with_config.py --base-flags @global_base_flags.json.
-    """
+def run_phase_1(args, runner, builder, output_dir):
     os.makedirs(output_dir, exist_ok=True)
-    optimization_config_filepath = os.path.join(output_dir, "optimization_config.json")
     global_flags_filepath = os.path.join(output_dir, "global_base_flags.json")
     db_root = os.path.join(output_dir, "opentuner.db")
 
     print("=== Phase 1: Global tuning (whole-project flags) ===")
-    global_config = global_tune(args, global_runner, global_builder, output_dir,
+    global_config = global_tune(args, runner, builder, output_dir,
                                 tuner_name="phase1_global",
                                 db_dir=os.path.join(db_root, "phase1_global"))
-    base_flags = global_flags_from_config(global_config, global_builder.config_generator)
+    base_flags = global_flags_from_config(global_config, builder.config_generator)
     with open(global_flags_filepath, "w") as f:
         json.dump(base_flags, f, indent=2)
     print(f"Global base flags ({len(base_flags)}) written to {global_flags_filepath}")
+    return base_flags
 
+
+def run_phase_2(args, runner, builder, file_entries, output_dir, base_flags):
+    db_root = os.path.join(output_dir, "opentuner.db")
     print("\n=== Phase 2: File-level tuning (gcc wrapper, global flags fixed) ===")
-    best_file_configs = iterative_tune(
-        args, file_runner, file_builder, file_entries, output_dir,
+    return iterative_tune(
+        args, runner, builder, file_entries, output_dir,
         tuner_name_prefix="phase2_", base_flags=base_flags, do_warmup_first=False,
         db_dir=os.path.join(db_root, "phase2_file")
     )
 
-    print("\n=== Phase 3: Function-level tuning (combined wrapper + plugin, global + file fixed) ===")
+
+def run_phase_3(args, runner, builder, function_entries, output_dir,
+                base_flags, file_configs, phase3_only=False):
+    db_root = os.path.join(output_dir, "opentuner.db")
+    optimization_config_filepath = os.path.join(output_dir, "optimization_config.json")
+    if phase3_only:
+        print("=== Phase 3 only: Function-level tuning (combined wrapper + plugin, global + file fixed) ===")
+    else:
+        print("\n=== Phase 3: Function-level tuning (combined wrapper + plugin, global + file fixed) ===")
     best_function_configs = iterative_tune(
-        args, combined_runner, combined_builder, function_entries, output_dir,
-        initial_config=best_file_configs, tuner_name_prefix="phase3_", base_flags=base_flags,
+        args, runner, builder, function_entries, output_dir,
+        initial_config=file_configs, tuner_name_prefix="phase3_", base_flags=base_flags,
         db_dir=os.path.join(db_root, "phase3_function")
     )
 
-    final_config = best_file_configs + best_function_configs
+    final_config = file_configs + best_function_configs
     with open(optimization_config_filepath, "w") as f:
         json.dump(final_config, f, indent=2)
     print(f"\nFinal combined config written to {optimization_config_filepath}")
+    return final_config
+
+
+def three_phase_iterative_tune(args, global_runner, file_runner, combined_runner,
+                               global_builder, file_builder, combined_builder,
+                               file_entries, function_entries, output_dir):
+    """Tune global, file, then function flags and write both replay files."""
+    base_flags = run_phase_1(args, global_runner, global_builder, output_dir)
+    file_configs = run_phase_2(args, file_runner, file_builder, file_entries,
+                               output_dir, base_flags)
+    run_phase_3(args, combined_runner, combined_builder, function_entries,
+                output_dir, base_flags, file_configs)
+    global_flags_filepath = os.path.join(output_dir, "global_base_flags.json")
     print(f"Apply it together with the base flags from {global_flags_filepath}")
