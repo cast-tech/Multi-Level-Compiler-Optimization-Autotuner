@@ -23,7 +23,7 @@ def create_argparser():
     argparser.add_argument('--compiler-bin', help='Path to the compiler bin directory', required=True)
     argparser.add_argument('--gcc-wrapper-bin', help='Path to the gcc wrapper bin directory', required=True)
     argparser.add_argument('--gcc-plugin', help='Path to the gcc plugin .so file', required=True)
-    argparser.add_argument('--file-entries', help='Path to the file-level optimization entries JSON', required=True)
+    argparser.add_argument('--module-entries', help='Path to the module-level optimization entries JSON', required=True)
     argparser.add_argument('--function-entries', help='Path to the function-level optimization entries JSON', required=True)
     argparser.add_argument('--output-dir', help='Path to the output directory', required=True)
     argparser.add_argument('--flag-set', choices=CombinedConfigGenerator.FLAG_SET_CHOICES,
@@ -32,9 +32,9 @@ def create_argparser():
     argparser.add_argument('--timeout', help='Program running timeout in seconds', type=int, default=10)
     argparser.add_argument('--runner-cores', help='Cores to set to taskset during runner run', type=str, default='')
     argparser.add_argument('--phase3-only', '--phase2-only', dest='phase3_only', action='store_true',
-                           help='Skip global and file-level tuning and run only function-level tuning, '
+                           help='Skip global and module-level tuning and run only function-level tuning, '
                                 'loading fixed global flags from <output-dir>/global_base_flags.json and '
-                                'fixed file config from <output-dir>/optimization_config.json')
+                                'fixed module config from <output-dir>/optimization_config.json')
     return argparser
 
 
@@ -58,26 +58,26 @@ def main():
         os.makedirs(args.output_dir, exist_ok=True)
         final_config_path = os.path.join(args.output_dir, "optimization_config.json")
         global_flags_path = os.path.join(args.output_dir, "global_base_flags.json")
-        fixed_file_config = load_json(final_config_path)
+        fixed_module_config = load_json(final_config_path)
         base_flags = load_json(global_flags_path) if os.path.isfile(global_flags_path) else ["-O3"]
         run_phase_3(args, combined_runner, combined_builder, function_entries,
-                    args.output_dir, base_flags, fixed_file_config, phase3_only=True)
+                    args.output_dir, base_flags, fixed_module_config, phase3_only=True)
     else:
         global_base_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.compiler_bin)
         # Tune the same flag set the later (wrapper/plugin) stages use.
         global_builder = SimpleEnhancedBuilder(global_base_builder, flag_set=args.flag_set)
         global_runner = SPECRunner(args.spec_threads_count, args.spec_iterations_count, args.spec_size, args.timeout, args.runner_cores)
 
-        file_base_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.gcc_wrapper_bin)
-        file_builder = WrapperEnhancedBuilder(
-            file_base_builder, args.gcc_wrapper_bin, args.compiler_bin,
+        module_base_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.gcc_wrapper_bin)
+        module_builder = WrapperEnhancedBuilder(
+            module_base_builder, args.gcc_wrapper_bin, args.compiler_bin,
             args.output_dir, args.flag_set)
-        file_runner = SPECRunner(args.spec_threads_count, args.spec_iterations_count, args.spec_size, args.timeout, args.runner_cores)
+        module_runner = SPECRunner(args.spec_threads_count, args.spec_iterations_count, args.spec_size, args.timeout, args.runner_cores)
 
-        file_entries = load_json(args.file_entries)
-        three_phase_iterative_tune(args, global_runner, file_runner, combined_runner,
-                                   global_builder, file_builder, combined_builder,
-                                   file_entries, function_entries, args.output_dir)
+        module_entries = load_json(args.module_entries)
+        three_phase_iterative_tune(args, global_runner, module_runner, combined_runner,
+                                   global_builder, module_builder, combined_builder,
+                                   module_entries, function_entries, args.output_dir)
 
 
 if __name__ == "__main__":

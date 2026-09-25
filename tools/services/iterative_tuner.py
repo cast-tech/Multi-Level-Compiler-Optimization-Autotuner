@@ -64,30 +64,30 @@ def iterative_tune(args, runner, builder, optimization_entries, output_dir, init
     return tuned_configs
 
 
-def two_phase_iterative_tune(args, file_runner, combined_runner, file_builder, combined_builder, file_entries, function_entries, output_dir):
+def two_phase_iterative_tune(args, module_runner, combined_runner, module_builder, combined_builder, module_entries, function_entries, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     optimization_config_filepath = os.path.join(output_dir, "optimization_config.json")
 
     db_root = os.path.join(output_dir, "opentuner.db")
 
-    print("=== Phase 1: File-level tuning (gcc wrapper) ===")
-    iterative_tune(args, file_runner, file_builder, file_entries, output_dir, tuner_name_prefix="phase1_",
-                   db_dir=os.path.join(db_root, "phase1_file"))
+    print("=== Phase 1: Module-level tuning (gcc wrapper) ===")
+    iterative_tune(args, module_runner, module_builder, module_entries, output_dir, tuner_name_prefix="phase1_",
+                   db_dir=os.path.join(db_root, "phase1_module"))
 
     if os.path.isfile(optimization_config_filepath):
         with open(optimization_config_filepath) as f:
-            best_file_configs = json.load(f)
+            best_module_configs = json.load(f)
     else:
-        best_file_configs = []
+        best_module_configs = []
 
-    print("\n=== Phase 2: Function-level tuning (combined wrapper + plugin, file entries fixed) ===")
+    print("\n=== Phase 2: Function-level tuning (combined wrapper + plugin, module entries fixed) ===")
     best_function_configs = iterative_tune(
         args, combined_runner, combined_builder, function_entries, output_dir,
-        initial_config=best_file_configs, tuner_name_prefix="phase2_",
+        initial_config=best_module_configs, tuner_name_prefix="phase2_",
         db_dir=os.path.join(db_root, "phase2_function")
     )
 
-    final_config = best_file_configs + best_function_configs
+    final_config = best_module_configs + best_function_configs
     with open(optimization_config_filepath, "w") as f:
         json.dump(final_config, f, indent=2)
     print(f"\nFinal combined config written to {optimization_config_filepath}")
@@ -141,45 +141,45 @@ def run_phase_1(args, runner, builder, output_dir):
     return base_flags
 
 
-def run_phase_2(args, runner, builder, file_entries, output_dir, base_flags):
+def run_phase_2(args, runner, builder, module_entries, output_dir, base_flags):
     db_root = os.path.join(output_dir, "opentuner.db")
-    print("\n=== Phase 2: File-level tuning (gcc wrapper, global flags fixed) ===")
+    print("\n=== Phase 2: Module-level tuning (gcc wrapper, global flags fixed) ===")
     return iterative_tune(
-        args, runner, builder, file_entries, output_dir,
+        args, runner, builder, module_entries, output_dir,
         tuner_name_prefix="phase2_", base_flags=base_flags, do_warmup_first=False,
-        db_dir=os.path.join(db_root, "phase2_file")
+        db_dir=os.path.join(db_root, "phase2_module")
     )
 
 
 def run_phase_3(args, runner, builder, function_entries, output_dir,
-                base_flags, file_configs, phase3_only=False):
+                base_flags, module_configs, phase3_only=False):
     db_root = os.path.join(output_dir, "opentuner.db")
     optimization_config_filepath = os.path.join(output_dir, "optimization_config.json")
     if phase3_only:
-        print("=== Phase 3 only: Function-level tuning (combined wrapper + plugin, global + file fixed) ===")
+        print("=== Phase 3 only: Function-level tuning (combined wrapper + plugin, global + module fixed) ===")
     else:
-        print("\n=== Phase 3: Function-level tuning (combined wrapper + plugin, global + file fixed) ===")
+        print("\n=== Phase 3: Function-level tuning (combined wrapper + plugin, global + module fixed) ===")
     best_function_configs = iterative_tune(
         args, runner, builder, function_entries, output_dir,
-        initial_config=file_configs, tuner_name_prefix="phase3_", base_flags=base_flags,
+        initial_config=module_configs, tuner_name_prefix="phase3_", base_flags=base_flags,
         db_dir=os.path.join(db_root, "phase3_function")
     )
 
-    final_config = file_configs + best_function_configs
+    final_config = module_configs + best_function_configs
     with open(optimization_config_filepath, "w") as f:
         json.dump(final_config, f, indent=2)
     print(f"\nFinal combined config written to {optimization_config_filepath}")
     return final_config
 
 
-def three_phase_iterative_tune(args, global_runner, file_runner, combined_runner,
-                               global_builder, file_builder, combined_builder,
-                               file_entries, function_entries, output_dir):
-    """Tune global, file, then function flags and write both replay files."""
+def three_phase_iterative_tune(args, global_runner, module_runner, combined_runner,
+                               global_builder, module_builder, combined_builder,
+                               module_entries, function_entries, output_dir):
+    """Tune global, module, then function flags and write both replay files."""
     base_flags = run_phase_1(args, global_runner, global_builder, output_dir)
-    file_configs = run_phase_2(args, file_runner, file_builder, file_entries,
+    module_configs = run_phase_2(args, module_runner, module_builder, module_entries,
                                output_dir, base_flags)
     run_phase_3(args, combined_runner, combined_builder, function_entries,
-                output_dir, base_flags, file_configs)
+                output_dir, base_flags, module_configs)
     global_flags_filepath = os.path.join(output_dir, "global_base_flags.json")
     print(f"Apply it together with the base flags from {global_flags_filepath}")

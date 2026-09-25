@@ -44,7 +44,7 @@ class PluginConfigGenerator:
             raise EnhancedBuilderError("No optimization entry type specified")
         if optimization_entry['type'] == 'function':
             valid_keys = ["type", "filename", "optimizations", "line_number", "function_name"]
-        elif optimization_entry['type'] == 'file':
+        elif optimization_entry['type'] == 'module':
             valid_keys = ["type", "filename", "optimizations"]
         else:
             raise EnhancedBuilderError("Unknown optimization entry type")

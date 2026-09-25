@@ -1,11 +1,13 @@
 import json
 import logging
+import math
 import opentuner
 import os
 
 from opentuner.resultsdb.models import Result
 from opentuner.search import manipulator
 from tools.services.cpu_info import get_cpu_info
+from tools.services.binary_comparison import PreviousBuild, radiff2_available, runnable_binaries
 from tools.services.enhanced_builder import EnhancedBuilderError
 from tools.interfaces.runner import RunError
 from tools.interfaces.builder import BuildError
@@ -27,10 +29,11 @@ class CompilerOptimizationsTuner(opentuner.measurement.MeasurementInterface):
         self.enhanced_builder = builder
         self.init_opt_config = init_opt_config
         self.current_opt_entry = current_opt_entry
-        # Flags applied to the whole build before the per-file/function overrides.
+        # Flags applied to the whole build before the per-module/function overrides.
         # Defaults to -O3; the 3-stage tuner passes the globally tuned flag set here.
         self.base_flags = list(base_flags) if base_flags else ["-O3"]
         self.history = []
+        self.previous_build = None
         self.parallel_compile = False
         self.report_filename = os.path.join(output_dir, name + "_report.json")
         if do_warmup:
@@ -40,7 +43,7 @@ class CompilerOptimizationsTuner(opentuner.measurement.MeasurementInterface):
     def warmup(self, warmup_steps=2):
         self.log.info(f"Warmup...")
         for i in range(warmup_steps):
-            self.compile_and_run_inner(self.init_opt_config)
+            self.compile_and_run_inner(self.init_opt_config, use_cache=False)
 
     def manipulator(self):
         m = manipulator.ConfigurationManipulator()
@@ -53,6 +56,17 @@ class CompilerOptimizationsTuner(opentuner.measurement.MeasurementInterface):
         self.log.info(f"Tuning report written to {self.report_filename}")
         with open(self.report_filename, 'w') as fd:
             json.dump(self.create_report(), fd, indent=2)
+        self._clear_previous_build()
+
+    def _clear_previous_build(self):
+        if self.previous_build is not None:
+            self.previous_build.close()
+            self.previous_build = None
+
+    def _discard_builds(self, next_build):
+        if next_build is not None:
+            next_build.close()
+        self._clear_previous_build()
 
     def create_report(self):
         return {
@@ -84,22 +98,48 @@ class CompilerOptimizationsTuner(opentuner.measurement.MeasurementInterface):
         self.history.append(info)
         return Result(time=runtime)
 
-    def compile_and_run_inner(self, optimizations_config):
+    def compile_and_run_inner(self, optimizations_config, use_cache=True):
+        if not use_cache:
+            self._clear_previous_build()
+        next_build = None
         try:
             build_status = self.enhanced_builder.build_with_optimizations(optimizations_config, self.base_flags)
+            binaries = (runnable_binaries(build_status, getattr(self.enhanced_builder, "builder", None))
+                        if use_cache else None)
+            if binaries and self.previous_build is not None and self.previous_build.equivalent_to(binaries):
+                self.log.info("Reusing runtime from the previous build")
+                return self.previous_build.runtime
+            if binaries and radiff2_available():
+                try:
+                    next_build = PreviousBuild(binaries)
+                except OSError as e:
+                    self.log.warning(f"Could not save binaries for comparison: {e}")
             runtime = self.runner.run(build_status)
         except RunError as e:
+            self._discard_builds(next_build)
             self.log.warning(f"Runner failed: {e}")
             return float('inf')
         except BuildError as e:
+            self._discard_builds(next_build)
             self.log.warning(f"Builder failed: {e}")
             return float('inf')
         except EnhancedBuilderError as e:
+            self._discard_builds(next_build)
             self.log.warning(f"Enhanced Builder failed: {e}")
             return float('inf')
+        except UnstableRuntimeError:
+            self._discard_builds(next_build)
+            raise
         if runtime == float('inf'):
+            self._discard_builds(next_build)
             self.log.warning(f"Runtime evaluation failed")
             return float('inf')
+        self._clear_previous_build()
+        if next_build is not None and math.isfinite(runtime):
+            next_build.runtime = runtime
+            self.previous_build = next_build
+        elif next_build is not None:
+            next_build.close()
         return runtime
 
     def get_optimizations_config(self, cfg):

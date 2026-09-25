@@ -42,7 +42,7 @@ class WrapperConfigGenerator:
     def get_optimization_entry_content(self, optimization_entry):
         if 'type' not in optimization_entry:
             raise EnhancedBuilderError("No optimization entry type specified")
-        elif optimization_entry['type'] == 'file':
+        elif optimization_entry['type'] == 'module':
             valid_keys = ["type", "filename", "optimizations"]
         else:
             raise EnhancedBuilderError("Unknown optimization entry type")
@@ -84,6 +84,6 @@ class WrapperEnhancedBuilder(EnhancedBuilder):
         self.config_generator.generate_optimization_config_file(optimization_config)
         os.environ["GCC_BIN"] = self.gcc_bin_path
         os.environ["OPTIMIZATION_CONFIG_PATH"] = self.config_generator.wrapper_config_filepath
-        # Base/global optimization flags a matched per-file entry should fully replace.
+        # Base/global optimization flags a matched per-module entry should fully replace.
         os.environ["BASE_OPTIMIZATION_FLAGS"] = " ".join(flags)
         return self.builder.build(flags)

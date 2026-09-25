@@ -2,14 +2,14 @@
 
 This project profiles C/C++ programs and uses OpenTuner to search GCC optimization
 settings at global, module, or function scope. Function settings are applied by
-a GCC plugin; file settings are applied by compiler wrapper scripts.
+a GCC plugin; module settings are applied by compiler wrapper scripts.
 
 The tools support CMake projects and SPEC CPU2017 benchmarks. They can:
 
 - discover hot functions and source files with `perf`;
-- tune functions with the GCC plugin or files with the GCC wrappers;
+- tune functions with the GCC plugin or modules with the GCC wrappers;
 - tune one global GCC flag set for a SPEC benchmark;
-- run a three-phase global, file, and function search;
+- run a three-phase global, module, and function search;
 - pin benchmark runs to selected CPUs and control parallel build jobs;
 - reduce a tuned flag set while recording every evaluated configuration.
 
@@ -72,12 +72,12 @@ functions with the same name:
 ]
 ```
 
-A file entry identifies the source file name seen by the compiler wrapper:
+A module entry identifies the source file name seen by the compiler wrapper:
 
 ```json
 [
   {
-    "type": "file",
+    "type": "module",
     "filename": "source.cpp"
   }
 ]
@@ -110,10 +110,10 @@ python tools/create_project_optimization_entries_function.py \
 `create_project_optimization_entries.py` is the compatible function-entry command
 kept for existing workflows.
 
-Generate file entries with the compiler wrappers:
+Generate module entries with the compiler wrappers:
 
 ```shell
-python tools/create_project_optimization_entries_file.py \
+python tools/create_project_optimization_entries_module.py \
   --project-dir /path/to/project \
   --project-binary relative/path/to/binary \
   --compiler-bin ./gcc-15.2.0-bin/bin \
@@ -129,16 +129,16 @@ Both commands write `optimization_entries.json`.
 The SPEC variants are:
 
 - `create_project_optimization_entries_function_spec.py` for function entries;
-- `create_project_optimization_entries_file_spec.py` for file entries;
-- `create_project_optimization_entries_file_func_spec.py` for both lists from one
+- `create_project_optimization_entries_module_spec.py` for module entries;
+- `create_project_optimization_entries_module_func_spec.py` for both lists from one
   profile.
 
-The combined command writes `file_optimization_entries.json` and
+The combined command writes `module_optimization_entries.json` and
 `function_optimization_entries.json`. If either file already exists in the output
 directory, that list is reused and re-ranked instead of rediscovered.
 
 ```shell
-python tools/create_project_optimization_entries_file_func_spec.py \
+python tools/create_project_optimization_entries_module_func_spec.py \
   --spec-root /path/to/cpu2017 \
   --spec-benchmark 605.mcf_s \
   --spec-config /path/to/config.cfg \
@@ -158,9 +158,15 @@ runs; omit it to let the operating system schedule the workload.
 OpenTuner options are accepted by every `tune_project_*` command. For example,
 `--stop-after 100` limits a tuning stage to 100 seconds.
 
+After each build, the tuner compares all runnable ELF binaries and shared libraries
+with the immediately previous measured build using `radiff2 -c`. A zero difference
+count for every matching binary reuses that build's runtime without running the
+benchmark again. Different file sizes, paths, permissions, or bytes cause a run.
+When `radiff2` is unavailable or no binaries can be found, the benchmark runs.
+
 Every tuner also accepts `--flag-set reduced` (the default 30-flag search space)
 or `--flag-set all` (the full 234-flag search space). The three-phase tuner applies
-the selection consistently to its global, file, and function phases. Both shared
+the selection consistently to its global, module, and function phases. Both shared
 flag sets are maintained in `tools/services/gcc_optimization_flags.py`.
 
 ### CMake plugin and wrapper tuning
@@ -182,7 +188,7 @@ python tools/tune_project_gcc_plugin.py \
 `tune_project.py` is kept as a compatible name for this plugin-based CMake
 workflow.
 
-Use wrapper tuning for file entries:
+Use wrapper tuning for module entries:
 
 ```shell
 python tools/tune_project_gcc_wrapper.py \
@@ -191,7 +197,7 @@ python tools/tune_project_gcc_wrapper.py \
   --compiler-bin ./gcc-15.2.0-bin/bin \
   --gcc-wrapper-bin ./wrappers/bin \
   --optimization-entries /tmp/autotune-entries/optimization_entries.json \
-  --output-dir /tmp/file-tuning \
+  --output-dir /tmp/module-tuning \
   --build-cores 8 \
   --stop-after 100
 ```
@@ -204,7 +210,7 @@ keeps a JSON report for every tuned entry.
 The single-scope SPEC commands are:
 
 - `tune_project_gcc_plugin_spec.py` for function-level plugin tuning;
-- `tune_project_gcc_wrapper_spec.py` for file-level wrapper tuning;
+- `tune_project_gcc_wrapper_spec.py` for module-level wrapper tuning;
 - `tune_project_spec_simple.py` for one global compiler configuration.
 
 Global tuning uses the built-in candidate list by default. Pass `--flags-file` to
@@ -215,8 +221,8 @@ overrides `--flag-set`.
 For a complete search, `tune_project_gcc_plugin_spec_three_phase.py` runs:
 
 1. global whole-benchmark flag tuning;
-2. file tuning on top of the fixed global flags;
-3. function tuning on top of the fixed global and file configurations.
+2. module tuning on top of the fixed global flags;
+3. function tuning on top of the fixed global and module configurations.
 
 ```shell
 python tools/tune_project_gcc_plugin_spec_three_phase.py \
@@ -226,7 +232,7 @@ python tools/tune_project_gcc_plugin_spec_three_phase.py \
   --compiler-bin ./gcc-15.2.0-bin/bin \
   --gcc-wrapper-bin ./wrappers/bin \
   --gcc-plugin ./plugin/build/cxx_optimizer.so \
-  --file-entries /tmp/spec-entries/file_optimization_entries.json \
+  --module-entries /tmp/spec-entries/module_optimization_entries.json \
   --function-entries /tmp/spec-entries/function_optimization_entries.json \
   --output-dir /tmp/spec-tuning \
   --spec-core-count 8 \
@@ -235,7 +241,7 @@ python tools/tune_project_gcc_plugin_spec_three_phase.py \
 ```
 
 The three-phase tuner writes the global flags to `global_base_flags.json` and the
-file/function entries to `optimization_config.json`. Use `--phase3-only` to rerun
+module/function entries to `optimization_config.json`. Use `--phase3-only` to rerun
 only function tuning from those existing files.
 
 ## Reduce a tuned configuration

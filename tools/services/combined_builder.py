@@ -27,7 +27,7 @@ class CombinedConfigGenerator:
 
 class CombinedEnhancedBuilder(EnhancedBuilder):
     """
-    Applies file-level optimizations via the gcc wrapper and function-level
+    Applies module-level optimizations via the gcc wrapper and function-level
     optimizations via the gcc plugin in a single build.
     """
 
@@ -42,14 +42,14 @@ class CombinedEnhancedBuilder(EnhancedBuilder):
         self.config_generator = CombinedConfigGenerator(flag_set)
 
     def build_with_optimizations(self, optimization_config, flags):
-        file_entries = [e for e in optimization_config if e.get('type') == 'file']
+        module_entries = [e for e in optimization_config if e.get('type') == 'module']
         function_entries = [e for e in optimization_config if e.get('type') == 'function']
 
-        self.wrapper_config_generator.generate_optimization_config_file(file_entries)
+        self.wrapper_config_generator.generate_optimization_config_file(module_entries)
         os.environ["GCC_BIN"] = self.gcc_bin_path
         os.environ["OPTIMIZATION_CONFIG_PATH"] = self.wrapper_config_generator.wrapper_config_filepath
-        # Base/global optimization flags a matched per-file entry should fully replace
-        # (plugin flags are excluded -- they are not per-file overrides).
+        # Base/global optimization flags a matched per-module entry should fully replace
+        # (plugin flags are excluded -- they are not per-module overrides).
         os.environ["BASE_OPTIMIZATION_FLAGS"] = " ".join(flags)
 
         self.plugin_config_generator.generate_optimization_config_file(function_entries)

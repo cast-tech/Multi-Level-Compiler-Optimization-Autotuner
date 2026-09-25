@@ -523,7 +523,7 @@ static void apply_field(Rule& rule, const std::string& key, const std::string& v
 }
 
 bool is_valid_rule(const Rule &rule) {
-    return (rule.type == "function" && !rule.function_name.empty()) || (rule.type == "file" && !rule.filename.empty());
+    return (rule.type == "function" && !rule.function_name.empty()) || (rule.type == "module" && !rule.filename.empty());
 }
 
 std::vector<Rule>* parse_config_file(const std::string& filepath) {

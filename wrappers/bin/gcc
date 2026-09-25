@@ -14,7 +14,7 @@ GCC_BIN="${GCC_BIN}"
 MAP_STR=""
 config_path="${OPTIMIZATION_CONFIG_PATH}"
 # Whole-build "base" optimization flags (e.g. the globally tuned flag set).
-# For a file that has its own tuned entry these are REPLACED by the file's
+# For a source module that has its own tuned entry these are REPLACED by its
 # flags rather than left to stack after them (where they would win).
 base_opt_flags="${BASE_OPTIMIZATION_FLAGS}"
 
@@ -49,7 +49,7 @@ if [[ -n "$WRAPPER_DEBUG_LOG" ]]; then
         _wrap_dbg "[gcc wrapper] config contents:"
         _wrap_dbg "$MAP_STR"
     else
-        _wrap_dbg "[gcc wrapper] config_path=$config_path (NOT FOUND -- no file-level flags will be injected)"
+        _wrap_dbg "[gcc wrapper] config_path=$config_path (NOT FOUND -- no module-level flags will be injected)"
     fi
 fi
 
@@ -81,7 +81,7 @@ if [[ "$found_target" == "false" ]]; then
     exit 0
 fi
 
-# For a matched target file, the per-file flags fully replace the base/global
+# For a matched target file, the per-module flags fully replace the base/global
 # optimization flags: build the set of base-flag tokens to drop from the command.
 # BASE_OPTIMIZATION_FLAGS is set by the Python builder without the plugin flags,
 # so -fplugin.../-fplugin-arg-... are never in this set.
@@ -107,7 +107,7 @@ for arg in "${compiler_args[@]}"; do
         flags_injected=true
         continue
     fi
-    # Drop the base/global optimization flags so the file's flags are authoritative
+    # Drop the base/global optimization flags so the module's flags are authoritative
     if [[ -n "${_drop_base[$arg]:-}" ]]; then
         continue
     fi

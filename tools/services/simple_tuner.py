@@ -62,7 +62,7 @@ class SimpleEnhancedBuilder(EnhancedBuilder):
     Adapts a plain Builder (Builder.build(flags)) to the EnhancedBuilder
     interface expected by CompilerOptimizationsTuner, so the same tuner can
     be reused directly against a builder that just takes a flat list of gcc
-    flags (e.g. SPECBuilder), with no per-file/function wrapper or plugin.
+    flags (e.g. SPECBuilder), with no per-module/function wrapper or plugin.
     """
 
     def __init__(self, builder, flags=None, flag_set="reduced"):

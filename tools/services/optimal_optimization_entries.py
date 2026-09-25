@@ -47,39 +47,33 @@ def get_function_files(function_runtimes, build_directory):
                 results[function_name] = matching_files
     return results
 
-def get_file_runtimes(function_runtimes, build_directory):
+def get_module_runtimes(function_runtimes, build_directory):
     function_in_files = get_function_files(function_runtimes, build_directory)
-    file_runtimes = {}
+    module_runtimes = {}
     for function_runtime in function_runtimes:
         function_name = function_runtime[0]
         if function_name not in function_in_files:
             continue
         for file in function_in_files[function_name]:
-            if file not in file_runtimes:
-                file_runtimes[file] = 0
-            file_runtimes[file] += function_runtime[1]
-    return list(file_runtimes.items())
+            if file not in module_runtimes:
+                module_runtimes[file] = 0
+            module_runtimes[file] += function_runtime[1]
+    return list(module_runtimes.items())
 
-def top_files_by_runtime(function_runtimes, build_directory, max_size):
-    file_runtimes = get_file_runtimes(function_runtimes, build_directory)
-    sorted_files = sorted(file_runtimes, key=lambda x: x[1], reverse=True)
-    return [name for name, _ in sorted_files[:max_size]]
+def top_modules_by_runtime(function_runtimes, build_directory, max_size):
+    module_runtimes = get_module_runtimes(function_runtimes, build_directory)
+    sorted_modules = sorted(module_runtimes, key=lambda x: x[1], reverse=True)
+    return [name for name, _ in sorted_modules[:max_size]]
 
 def top_entries_by_runtime(function_runtimes, max_size, build_directory="", is_function=True):
     if is_function:
         return top_functions_by_runtime(function_runtimes, max_size)
-    return top_files_by_runtime(function_runtimes, build_directory, max_size)
+    return top_modules_by_runtime(function_runtimes, build_directory, max_size)
 
 def get_optimization_entry(entry, is_function):
-    entry_type = "function_"
-    if not is_function:
-        entry_type = "file"
-
-    optimization_entry = {
-        "type": entry_type.replace("_", ""),
-        f"{entry_type}name": entry
-    }
-    return optimization_entry
+    if is_function:
+        return {"type": "function", "function_name": entry}
+    return {"type": "module", "filename": entry}
 
 def rank_entries_by_disable_impact(enhanced_builder, runner, top_entries, is_function):
     entry_runtimes_optimization_disabled = []
@@ -123,16 +117,16 @@ def create_optimal_optimization_entries(enhanced_builder: EnhancedBuilder, runne
     write_optimization_entries(result_optimization_entries, output_dir, "optimization_entries.json")
 
 
-def create_optimal_optimization_entries_file_and_function(function_enhanced_builder: EnhancedBuilder, file_enhanced_builder: EnhancedBuilder, runner, profiler, output_dir, report_limit):
+def create_optimal_optimization_entries_module_and_function(function_enhanced_builder: EnhancedBuilder, module_enhanced_builder: EnhancedBuilder, runner, profiler, output_dir, report_limit):
     """
-    Same as create_optimal_optimization_entries, but derives both file-level and
+    Same as create_optimal_optimization_entries, but derives both module-level and
     function-level optimization entries from a single baseline build + perf profile,
     instead of profiling once per entry type. The baseline build/profile is done with
     function_enhanced_builder (e.g. PluginEnhancedBuilder); per-entry builds then use
-    function_enhanced_builder for function entries and file_enhanced_builder (e.g.
-    WrapperEnhancedBuilder) for file entries.
+    function_enhanced_builder for function entries and module_enhanced_builder (e.g.
+    WrapperEnhancedBuilder) for module entries.
 
-    If file_optimization_entries.json / function_optimization_entries.json already
+    If module_optimization_entries.json / function_optimization_entries.json already
     exist in output_dir, their entries are reused as the top entries for that entry
     type and the baseline build + profiler.profile + top_entries_by_runtime step is
     skipped entirely when neither file needs it.
@@ -140,7 +134,7 @@ def create_optimal_optimization_entries_file_and_function(function_enhanced_buil
     os.makedirs(output_dir, exist_ok=True)
 
     entries_config = (
-        (False, file_enhanced_builder, "file_optimization_entries.json"),
+        (False, module_enhanced_builder, "module_optimization_entries.json"),
         (True, function_enhanced_builder, "function_optimization_entries.json"),
     )
 

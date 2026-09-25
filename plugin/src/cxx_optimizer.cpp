@@ -376,9 +376,9 @@ static void on_start_unit(std::vector<Rule> *rules) {
     cxx_dbg("[cxx_optimizer] on_start_unit main_input_basename='%s'",
             main_input_basename ? main_input_basename : "(null)");
     for (auto it = rules->rbegin(); it != rules->rend(); ++it) {
-        if (it->type == "file" && (it->filename == "*" || it->filename == std::string(main_input_basename))) {
+        if (it->type == "module" && (it->filename == "*" || it->filename == std::string(main_input_basename))) {
             std::string attributes = build_attribute_string(it->opts);
-            cxx_dbg("[cxx_optimizer] file MATCH filename='%s' -> optimize(\"%s\")",
+            cxx_dbg("[cxx_optimizer] module MATCH filename='%s' -> optimize(\"%s\")",
                     it->filename.c_str(), attributes.c_str());
             handle_optimize_pragma(attributes);
             break;

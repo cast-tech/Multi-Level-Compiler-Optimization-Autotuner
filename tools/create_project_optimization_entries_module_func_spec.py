@@ -4,7 +4,7 @@ from tools.implementations.builders.spec_builder import SPECBuilder
 from tools.implementations.runners.spec_runner import SPECRunner
 from tools.implementations.profilers.spec_profiler import SPECProfiler
 from tools.implementations.utils.perf import Perf
-from tools.services.optimal_optimization_entries import create_optimal_optimization_entries_file_and_function
+from tools.services.optimal_optimization_entries import create_optimal_optimization_entries_module_and_function
 from tools.services.gcc_plugin_support import PluginEnhancedBuilder
 from tools.services.gcc_wrapper_support import WrapperEnhancedBuilder
 
@@ -37,15 +37,15 @@ def main():
     function_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.compiler_bin)
     function_enhanced_builder = PluginEnhancedBuilder(function_builder, args.gcc_plugin, args.output_dir)
 
-    file_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.gcc_wrapper_bin)
-    file_enhanced_builder = WrapperEnhancedBuilder(file_builder, args.gcc_wrapper_bin, args.compiler_bin, args.output_dir)
+    module_builder = SPECBuilder(args.spec_root, args.spec_benchmark, args.spec_config, args.output_dir, args.spec_core_count, args.gcc_wrapper_bin)
+    module_enhanced_builder = WrapperEnhancedBuilder(module_builder, args.gcc_wrapper_bin, args.compiler_bin, args.output_dir)
 
     runner = SPECRunner(args.spec_threads_count, args.spec_iterations_count, args.spec_size, args.timeout, args.runner_cores)
     profiler = SPECProfiler(Perf(args.perf, args.timeout, args.frequency, args.output_dir),
                             args.spec_threads_count, args.spec_iterations_count,
                             args.spec_size, args.runner_cores)
 
-    create_optimal_optimization_entries_file_and_function(function_enhanced_builder, file_enhanced_builder, runner, profiler, args.output_dir, args.entries_limit)
+    create_optimal_optimization_entries_module_and_function(function_enhanced_builder, module_enhanced_builder, runner, profiler, args.output_dir, args.entries_limit)
 
 
 if __name__ == "__main__":
