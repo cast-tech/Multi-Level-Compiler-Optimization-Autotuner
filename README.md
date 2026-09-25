@@ -185,9 +185,6 @@ python tools/tune_project_gcc_plugin.py \
   --stop-after 100
 ```
 
-`tune_project.py` is kept as a compatible name for this plugin-based CMake
-workflow.
-
 Use wrapper tuning for module entries:
 
 ```shell
